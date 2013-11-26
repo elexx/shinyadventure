@@ -14,6 +14,9 @@ import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameters;
 
+import tuwien.inso.mnsa.smssender.translator.CodeTranslator;
+import tuwien.inso.mnsa.smssender.translator.GSM0338Translator;
+
 @RunWith(value = Parameterized.class)
 public class TranslatorTest {
 
