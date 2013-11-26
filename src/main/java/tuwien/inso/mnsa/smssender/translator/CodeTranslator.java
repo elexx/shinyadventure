@@ -1,4 +1,4 @@
-package tuwien.inso.mnsa.smssender;
+package tuwien.inso.mnsa.smssender.translator;
 
 public interface CodeTranslator {
 
