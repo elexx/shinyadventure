@@ -2,7 +2,10 @@ package tuwien.inso.mnsa.smssender.translator;
 
 class Interleaved7BitTranslator {
 
-	public byte[] encode(byte[] input) {
+	private Interleaved7BitTranslator() {
+	}
+
+	public static byte[] encode(byte[] input) {
 		byte[] output = new byte[(int) Math.ceil(input.length * 7f / 8)];
 
 		int ii;
@@ -16,7 +19,7 @@ class Interleaved7BitTranslator {
 		return output;
 	}
 
-	public byte[] decode(byte[] input) {
+	public static byte[] decode(byte[] input) {
 		int outputlength = input.length * 8 / 7;
 		byte[] output = new byte[outputlength];
 
