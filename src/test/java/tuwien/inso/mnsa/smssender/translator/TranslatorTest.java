@@ -20,7 +20,6 @@ import tuwien.inso.mnsa.smssender.translator.Interleaved7BitTranslator;
 @RunWith(value = Parameterized.class)
 public class TranslatorTest {
 
-	private Interleaved7BitTranslator translator;
 	private final byte[] rawMessage;
 	private final byte[] encodedMessage;
 
@@ -42,19 +41,18 @@ public class TranslatorTest {
 
 	@Before
 	public void startup() {
-		translator = new Interleaved7BitTranslator();
 	}
 
 	@Test
 	public void encodeTest() {
-		byte[] encoded = translator.encode(rawMessage);
+		byte[] encoded = Interleaved7BitTranslator.encode(rawMessage);
 
 		assertThat(Arrays.asList(encoded), contains(encodedMessage));
 	}
 
 	@Test
 	public void decoderTest() {
-		byte[] decoded = translator.decode(encodedMessage);
+		byte[] decoded = Interleaved7BitTranslator.decode(encodedMessage);
 
 		// if the encoded size is a multiple of 7 there is a trailing 0x00 which may or may not be part of the original byte sequence
 		byte[] rawMessageWithTrailingNull = Arrays.copyOf(rawMessage, rawMessage.length + 1);
