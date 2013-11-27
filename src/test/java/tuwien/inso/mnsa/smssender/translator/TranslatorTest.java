@@ -1,4 +1,4 @@
-package tuwien.inso.mnsa.smssender;
+package tuwien.inso.mnsa.smssender.translator;
 
 import static org.hamcrest.CoreMatchers.anyOf;
 import static org.hamcrest.Matchers.contains;
@@ -14,13 +14,13 @@ import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameters;
 
-import tuwien.inso.mnsa.smssender.translator.CodeTranslator;
-import tuwien.inso.mnsa.smssender.translator.GSM0338Translator;
+import tuwien.inso.mnsa.smssender.Utils;
+import tuwien.inso.mnsa.smssender.translator.Interleaved7BitTranslator;
 
 @RunWith(value = Parameterized.class)
 public class TranslatorTest {
 
-	private CodeTranslator translator;
+	private Interleaved7BitTranslator translator;
 	private final byte[] rawMessage;
 	private final byte[] encodedMessage;
 
@@ -42,7 +42,7 @@ public class TranslatorTest {
 
 	@Before
 	public void startup() {
-		translator = new GSM0338Translator();
+		translator = new Interleaved7BitTranslator();
 	}
 
 	@Test

@@ -1,8 +1,7 @@
 package tuwien.inso.mnsa.smssender.translator;
 
-public class GSM0338Translator implements CodeTranslator {
+class Interleaved7BitTranslator {
 
-	@Override
 	public byte[] encode(byte[] input) {
 		byte[] output = new byte[(int) Math.ceil(input.length * 7f / 8)];
 
@@ -17,7 +16,6 @@ public class GSM0338Translator implements CodeTranslator {
 		return output;
 	}
 
-	@Override
 	public byte[] decode(byte[] input) {
 		int outputlength = input.length * 8 / 7;
 		byte[] output = new byte[outputlength];
