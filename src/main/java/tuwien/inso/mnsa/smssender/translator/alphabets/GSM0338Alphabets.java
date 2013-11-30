@@ -3,7 +3,6 @@ package tuwien.inso.mnsa.smssender.translator.alphabets;
 import java.util.Arrays;
 import java.util.Map;
 
-
 import com.google.common.collect.Maps;
 
 public class GSM0338Alphabets {
@@ -11,8 +10,8 @@ public class GSM0338Alphabets {
 	}
 
 	public static final EscapeShiftingAlphabet DEFAULT_GSM0338;
-	public static final PrimitiveAlphabet BASIC_CHARACTER_SET;
-	public static final PrimitiveAlphabet BASIC_CHARACTER_SET_EXTENSION;
+	private static final PrimitiveAlphabet BASIC_CHARACTER_SET;
+	private static final PrimitiveAlphabet BASIC_CHARACTER_SET_EXTENSION;
 
 	static {
 		Map<Character, Byte> basicExtension = Maps.newHashMapWithExpectedSize(9);

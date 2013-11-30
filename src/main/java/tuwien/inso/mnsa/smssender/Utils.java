@@ -13,6 +13,10 @@ public class Utils {
 		return buffer.toString();
 	}
 
+	public static String bytesToHex(byte bytee) {
+		return bytesToHex(new byte[] { bytee });
+	}
+
 	public static String bytesToHex(byte[] bytes) {
 		char[] hexChars = new char[bytes.length * 2];
 		int v;

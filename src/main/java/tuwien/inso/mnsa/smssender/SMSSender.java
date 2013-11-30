@@ -17,7 +17,6 @@ import java.nio.charset.Charset;
 import java.util.Enumeration;
 import java.util.Properties;
 
-import tuwien.inso.mnsa.smssender.translator.GSM0338Encoder;
 import tuwien.inso.mnsa.smssender.translator.MappingException;
 
 public class SMSSender {
@@ -27,7 +26,7 @@ public class SMSSender {
 	private static final String PROPERTIES_CSV_FILE_IDENTIFIER = "csvfile";
 	private static final int COMMUNICATION_TIMEOUT = 100;
 
-	public static void main(String[] args) throws PortInUseException, NoSuchPortException, UnsupportedCommOperationException, IOException, MappingException {
+	public static void main(String[] args) throws PortInUseException, NoSuchPortException, UnsupportedCommOperationException, IOException, MappingException, PDUException {
 		FileInputStream propertiesInStream;
 		try {
 			propertiesInStream = new FileInputStream(PROPERTIES_FILENAME);
@@ -69,6 +68,12 @@ public class SMSSender {
 			return;
 		}
 
+		SerialPort serialPort = CommPortIdentifier.getPortIdentifier(properties.getProperty(PROPERTIES_PORT_IDENTIFIER)).open(SMSSender.class.getCanonicalName(), COMMUNICATION_TIMEOUT);
+		serialPort.enableReceiveTimeout(COMMUNICATION_TIMEOUT);
+
+		//		BufferedReader reader = new BufferedReader(new InputStreamReader(serialPort.getInputStream(), Charset.forName("US-ASCII")));
+		PrintWriter writer = new PrintWriter(new OutputStreamWriter(serialPort.getOutputStream(), Charset.forName("US-ASCII")), true);
+
 		String line;
 		while ((line = smsReader.readLine()) != null) {
 			String number, text;
@@ -76,28 +81,22 @@ public class SMSSender {
 			number = line.substring(0, indexOfFirstComma);
 			text = line.substring(indexOfFirstComma + 1);
 
-			byte[] gsm0338text = GSM0338Encoder.encode(text);
-			String decodedGsm0338text = GSM0338Encoder.decode(gsm0338text);
-
 			System.out.println("[" + number + "] " + text);
-			System.out.println("\t = " + Utils.bytesToHex(gsm0338text));
-			System.out.println("\t = " + decodedGsm0338text);
+			PDU pdu = new PDU(number.substring(1), text);
+			String serializedPdu = pdu.toHexString();
+			System.out.println("\t" + serializedPdu);
+
+			writer.println("AT+CMGS=" + Integer.toHexString(serializedPdu.length() - 2));
+			writer.print(serializedPdu);
+			writer.print('\u001A');
+
 		}
 
-		smsReader.close();
-
-		@SuppressWarnings("unchecked")
-		SerialPort serialPort;
-		serialPort = CommPortIdentifier.getPortIdentifier(properties.getProperty(PROPERTIES_PORT_IDENTIFIER)).open(SMSSender.class.getCanonicalName(), COMMUNICATION_TIMEOUT);
-		serialPort.enableReceiveTimeout(COMMUNICATION_TIMEOUT);
-
-		BufferedReader reader = new BufferedReader(new InputStreamReader(serialPort.getInputStream(), Charset.forName("US-ASCII")));
-		PrintWriter writer = new PrintWriter(new OutputStreamWriter(serialPort.getOutputStream(), Charset.forName("US-ASCII")), true);
-
-		reader.close();
+		//		reader.close();
 		writer.close();
-
 		serialPort.close();
+
+		smsReader.close();
 
 	}
 }
