@@ -16,4 +16,8 @@ public class GSM0338Encoder {
 		byte[] raw = Interleaved7BitTranslator.decode(input);
 		return GSM0338Alphabets.DEFAULT_GSM0338.getString(raw);
 	}
+
+	public static int getRawLength(String input) throws MappingException {
+		return GSM0338Alphabets.DEFAULT_GSM0338.getBytes(input).length;
+	}
 }

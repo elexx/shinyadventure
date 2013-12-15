@@ -17,6 +17,9 @@ import java.nio.charset.Charset;
 import java.util.Enumeration;
 import java.util.Properties;
 
+import tuwien.inso.mnsa.smssender.sms.GSMNumber;
+import tuwien.inso.mnsa.smssender.sms.SMS;
+import tuwien.inso.mnsa.smssender.sms.SMSException;
 import tuwien.inso.mnsa.smssender.translator.GSM0338Encoder;
 import tuwien.inso.mnsa.smssender.translator.MappingException;
 
@@ -27,7 +30,7 @@ public class SMSSender {
 	private static final String PROPERTIES_CSV_FILE_IDENTIFIER = "csvfile";
 	private static final int COMMUNICATION_TIMEOUT = 100;
 
-	public static void main(String[] args) throws PortInUseException, NoSuchPortException, UnsupportedCommOperationException, IOException, MappingException {
+	public static void main(String[] args) throws PortInUseException, NoSuchPortException, UnsupportedCommOperationException, IOException, MappingException, SMSException {
 		FileInputStream propertiesInStream;
 		try {
 			propertiesInStream = new FileInputStream(PROPERTIES_FILENAME);
@@ -60,7 +63,6 @@ public class SMSSender {
 		}
 		System.out.println("Port listing done.");
 
-
 		BufferedReader smsReader;
 		try {
 			smsReader = new BufferedReader(new InputStreamReader(new FileInputStream(properties.getProperty(PROPERTIES_CSV_FILE_IDENTIFIER)), Charset.forName("UTF-8")));
@@ -82,9 +84,19 @@ public class SMSSender {
 			System.out.println("[" + number + "] " + text);
 			System.out.println("\t = " + Utils.bytesToHex(gsm0338text));
 			System.out.println("\t = " + decodedGsm0338text);
+
+			//SMS sms = SMS.generateSimpleSMS(GSMNumber.fromInternational(number), text);
+			SMS[] sms = SMS.generateConcatenatedSMS(GSMNumber.fromInternational(number), text);
+
+			for (SMS s : sms) {
+				System.out.println("\tPDU: " + Utils.bytesToHex(s.getPDU()));
+			}
 		}
 
 		smsReader.close();
+
+		if (true)
+			return;
 
 		@SuppressWarnings("unchecked")
 		SerialPort serialPort;
@@ -94,10 +106,82 @@ public class SMSSender {
 		BufferedReader reader = new BufferedReader(new InputStreamReader(serialPort.getInputStream(), Charset.forName("US-ASCII")));
 		PrintWriter writer = new PrintWriter(new OutputStreamWriter(serialPort.getOutputStream(), Charset.forName("US-ASCII")), true);
 
+		String atz = sendCommandReadAnswer(reader, writer, "ATZ", 1)[0];
+		System.out.println("Answer to ATZ: " + atz);
+
+		String cpin = sendCommandReadAnswer(reader, writer, "AT+CPIN?", 2)[0];
+		System.out.println("Answer to AT+CPIN?: " + cpin);
+
+		boolean pinlock = !cpin.contains("READY");
+
+		if (pinlock) {
+			System.out.print("Enter PIN: ");
+			String pin = new String(System.console().readPassword());
+
+			cpin = sendCommandReadAnswer(reader, writer, "AT+CPIN=" + pin, 1)[0];
+			System.out.println("Answer to AT+CPIN=****: " + cpin);
+
+			if (!"OK".equals(cpin)) {
+				System.out.println("PIN unlock failed :( received from modem: \"" + cpin + "\"");
+				return;
+			}
+		}
+
+		do {
+			String creg = sendCommandReadAnswer(reader, writer, "AT+CREG?", 2)[0];
+			System.out.println("Answer to AT+CREG?: " + creg);
+			String[] cregS = creg.split(",");
+			if (cregS.length < 2) {
+				System.out.println("Unparseable AT+CREG? answer: " + creg);
+				return;
+			}
+			creg = cregS[1];
+			if (creg.equals("1") || creg.equals("5")) {
+				break;
+			}
+			System.out.print("Waiting for network... ");
+
+			try {
+				Thread.sleep(2000);
+			} catch (InterruptedException ignored) {
+			}
+		} while (true);
+
+		sendCommandReadAnswer(reader, writer, "AT+COPS=3,0", 1);
+
+		String cops = sendCommandReadAnswer(reader, writer, "AT+COPS?", 1)[0];
+		System.out.println("Answer to AT+COPS?: " + cops);
+
+		//byte[] pdu = 
+		//sendCommandReadAnswer(reader, writer, "AT+CMGS=" + testPdu.length, 1);
+
 		reader.close();
 		writer.close();
 
 		serialPort.close();
 
+	}
+
+	private static String[] sendCommandReadAnswer(BufferedReader reader, PrintWriter writer, String command, int lines) throws IOException {
+		writer.print(command);
+		writer.print("\r\n");
+		writer.flush();
+
+		String[] ret = new String[lines];
+		int i = 0;
+		String line;
+
+		while (i < lines) {
+			if ((line = ret[i] = reader.readLine()) == null)
+				break;
+
+			line = line.trim();
+
+			if ("".equals(line) || command.equals(line))
+				continue;
+			i++;
+		}
+
+		return ret;
 	}
 }
