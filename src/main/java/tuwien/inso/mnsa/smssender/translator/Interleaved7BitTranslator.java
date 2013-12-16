@@ -1,11 +1,11 @@
 package tuwien.inso.mnsa.smssender.translator;
 
-class Interleaved7BitTranslator {
+public class Interleaved7BitTranslator {
 
 	private Interleaved7BitTranslator() {
 	}
 
-	public static byte[] encode(byte[] input) {
+	public static byte[] packSeptets(byte[] input) {
 		byte[] output = new byte[(int) Math.ceil(input.length * 7f / 8)];
 
 		int ii;
@@ -19,7 +19,7 @@ class Interleaved7BitTranslator {
 		return output;
 	}
 
-	public static byte[] decode(byte[] input) {
+	public static byte[] unpackSeptets(byte[] input) {
 		int outputlength = input.length * 8 / 7;
 		byte[] output = new byte[outputlength];
 
@@ -35,4 +35,7 @@ class Interleaved7BitTranslator {
 		return output;
 	}
 
+	public static int countUnpackedOctetsFloor(int packedLength) {
+		return packedLength * 8 / 7;
+	}
 }

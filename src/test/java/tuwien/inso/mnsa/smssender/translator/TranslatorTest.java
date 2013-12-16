@@ -45,14 +45,14 @@ public class TranslatorTest {
 
 	@Test
 	public void encodeTest() {
-		byte[] encoded = Interleaved7BitTranslator.encode(rawMessage);
+		byte[] encoded = Interleaved7BitTranslator.packSeptets(rawMessage);
 
 		assertThat(Arrays.asList(encoded), contains(encodedMessage));
 	}
 
 	@Test
 	public void decoderTest() {
-		byte[] decoded = Interleaved7BitTranslator.decode(encodedMessage);
+		byte[] decoded = Interleaved7BitTranslator.unpackSeptets(encodedMessage);
 
 		// if the encoded size is a multiple of 7 there is a trailing 0x00 which may or may not be part of the original byte sequence
 		byte[] rawMessageWithTrailingNull = Arrays.copyOf(rawMessage, rawMessage.length + 1);
