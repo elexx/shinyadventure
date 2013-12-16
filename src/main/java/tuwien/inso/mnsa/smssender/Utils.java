@@ -35,4 +35,9 @@ public class Utils {
 		}
 		return data;
 	}
+
+	public static String byteToHex(byte b) {
+		int v = b & 0xFF;
+		return new String(new char[] { hexArray[v >>> 4], hexArray[v & 0x0F] });
+	}
 }

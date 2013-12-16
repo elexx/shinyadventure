@@ -1,13 +1,6 @@
 package tuwien.inso.mnsa.smssender.sms;
 
-import java.nio.ByteBuffer;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Random;
-
-import tuwien.inso.mnsa.smssender.Utils;
-import tuwien.inso.mnsa.smssender.translator.GSM0338Encoder;
+import tuwien.inso.mnsa.smssender.translator.Interleaved7BitTranslator;
 import tuwien.inso.mnsa.smssender.translator.MappingException;
 
 public class SMS {
@@ -19,25 +12,32 @@ public class SMS {
 	public static final byte PROTOCOL_IDENTIFIER = 0;
 	public static final byte DATA_CODING_SCHEME = 0;
 
+	private final int smsDescriptorLength;
+	
 	private final byte[] udh, payload;
 	private final byte[] pdu;
 
-	public SMS(GSMNumber smsCenter, SMSType type, boolean requestStatusReport, byte referenceNumber, GSMNumber destination, byte[] udh, byte[] payload, int septetCount) throws MappingException, SMSException {
-		if (payload.length > MAXIMUM_PDU_LENGTH) {
-			throw new SMSException("text too long");
-		}
-
+	SMS(GSMNumber smsCenter, SMSType type, boolean requestStatusReport, byte referenceNumber, GSMNumber destination, byte[] udh, byte[] payloadOctets) throws MappingException, SMSException {
 		if (udh == null)
 			udh = new byte[0];
 
+		int udhVirtualSeptets = udh.length * 8 / 7 + ((udh.length * 8) % 7 == 0 ? 0 : 1);
+		int effectiveSeptets = udhVirtualSeptets + payloadOctets.length;
+		byte[] effectivePayloadUnpacked = new byte[effectiveSeptets];
+		System.arraycopy(payloadOctets, 0, effectivePayloadUnpacked, udhVirtualSeptets, payloadOctets.length);
+		byte[] effectivePayoadPacked = Interleaved7BitTranslator.packSeptets(effectivePayloadUnpacked);
+		System.arraycopy(udh, 0, effectivePayoadPacked, 0, udh.length);
+
 		this.udh = udh;
-		this.payload = payload;
+		this.payload = payloadOctets;
 
 		byte[] smsCenterRaw;
 		if (smsCenter != null)
 			smsCenterRaw = smsCenter.getEncoded();
 		else
 			smsCenterRaw = new byte[] { (byte) 0 };
+		
+		smsDescriptorLength = smsCenterRaw.length;
 
 		byte[] smsReceiverRaw = destination.getEncoded(false);
 		byte messageFlags = 0;
@@ -47,14 +47,7 @@ public class SMS {
 			messageFlags |= 1 << STATUS_REPORT_BIT;
 		messageFlags |= type.getByte();
 
-		int paddingBits = (7 - (udh.length * 8)) % 7;
-		if (paddingBits < 0)
-			paddingBits += 7;
-		byte[] shiftedPayload = shiftRight(payload, paddingBits);
-		System.out.println("pre:  " + Utils.bytesToHex(payload));
-		System.out.println("post: " + Utils.bytesToHex(shiftedPayload));
-
-		pdu = new byte[smsCenterRaw.length + 2 + smsReceiverRaw.length + 3 + udh.length + shiftedPayload.length];
+		pdu = new byte[smsCenterRaw.length + 2 + smsReceiverRaw.length + 3 + effectivePayoadPacked.length];
 		int i = 0;
 
 		System.arraycopy(smsCenterRaw, 0, pdu, i, smsCenterRaw.length);
@@ -65,35 +58,12 @@ public class SMS {
 		i += smsReceiverRaw.length;
 		pdu[i++] = PROTOCOL_IDENTIFIER;
 		pdu[i++] = DATA_CODING_SCHEME;
-		pdu[i++] = (byte) ((udh.length * 8 + paddingBits) / 7 + septetCount);
-		System.arraycopy(udh, 0, pdu, i, udh.length);
-		i += udh.length;
-		System.arraycopy(shiftedPayload, 0, pdu, i, shiftedPayload.length);
+		pdu[i++] = (byte) effectiveSeptets;
+		System.arraycopy(effectivePayoadPacked, 0, pdu, i, effectivePayoadPacked.length);
 	}
-
-	static byte[] shiftRight(byte[] bytes, int bits) {
-		if (bits == 0)
-			return bytes;
-
-		int lsb = 0;
-		ByteBuffer buf = ByteBuffer.allocate(bytes.length + 1);
-		int lsbMask = (1 << bits) - 1;
-		System.out.println(">> " + bits + ": " + lsbMask);
-
-		for (int i = 0; i < bytes.length; i++) {
-			// store the least significant bits
-			int newlsb = bytes[i] & lsbMask;
-
-			int current = (bytes[i] & 0xFF) >>> bits;
-			current |= (lsb << (8 - bits));
-			buf.put((byte) current);
-
-			lsb = newlsb;
-		}
-
-		buf.put((byte) (lsb << bits));
-
-		return Arrays.copyOfRange(buf.array(), 0, buf.position());
+	
+	public int getSMSCDescriptorLength() {
+		return smsDescriptorLength;
 	}
 
 	public byte[] getPDU() {
@@ -134,36 +104,5 @@ public class SMS {
 		public boolean getMSB() {
 			return msb;
 		}
-	}
-
-	public static SMS generateSimpleSMS(GSMNumber destination, String text) throws MappingException, SMSException {
-		return new SMS(null, SMSType.SMS_SUBMIT, false, (byte) 0, destination, null, GSM0338Encoder.encode(text), (byte) GSM0338Encoder.getRawLength(text));
-	}
-
-	private static final Random random = new Random();
-
-	public static SMS[] generateConcatenatedSMS(GSMNumber destination, String text) throws MappingException, SMSException {
-		int split = 169;
-		List<String> splits = new ArrayList<>(text.length() / split + 1);
-		while (true) {
-			if (text.length() <= split) {
-				splits.add(text);
-				break;
-			}
-			splits.add(text.substring(0, split));
-			text = text.substring(split);
-		}
-
-		byte sequence = (byte) random.nextInt(0xFF);
-		SMS[] ret = new SMS[splits.size()];
-		int current = 0;
-
-		for (String sub : splits) {
-			byte[] udh = new byte[] { 5, 0, 3, sequence, (byte) splits.size(), (byte) (current + 1) };
-			ret[current++] = new SMS(null, SMSType.SMS_SUBMIT, true, (byte) 0, destination, udh, GSM0338Encoder.encode(sub), (byte) GSM0338Encoder.getRawLength(sub));
-		}
-
-		return ret;
-
 	}
 }
