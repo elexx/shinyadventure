@@ -1,0 +1,2 @@
+# add file 'sendsms.properties' and 'sendsms.csv' for easier development
+# this files will be copied to target

@@ -65,4 +65,5 @@ $RECYCLE.BIN/
 
 ##########
 #project specific
-
+/src/main/config/sendsms.csv
+/src/main/config/sendsms.properties
