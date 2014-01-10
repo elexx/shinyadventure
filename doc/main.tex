@@ -1,0 +1,132 @@
+\documentclass[paper=a4, fontsize=11pt]{scrartcl}
+\usepackage[svgnames]{xcolor}
+\usepackage[a4paper,pdftex]{geometry}
+
+\usepackage[german]{babel}
+\usepackage[utf8x]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+
+\usepackage{fullpage}
+\usepackage{fancyhdr}
+\pagestyle{fancy}
+	\fancyhead[L]{INSO - Industrial Software\\ \small{Institut für Rechnergestützte Automation | Fakultät für Informatik | Technische Universität Wien}}
+	\fancyhead[C]{}
+	\fancyhead[R]{}
+	\fancyfoot[L]{Bulk SMS Sender}
+	\fancyfoot[C]{}
+	\fancyfoot[R]{Seite \thepage}
+	\renewcommand{\headrulewidth}{1pt}
+	\renewcommand{\footrulewidth}{1pt}
+\setlength{\headheight}{0.5cm}
+\setlength{\headsep}{0.75cm}
+
+\usepackage{hyperref}
+	\hypersetup{
+		colorlinks,
+		citecolor=black,
+		filecolor=black,
+		linkcolor=black,
+		urlcolor=black
+	}
+
+\usepackage{pdfpages}
+
+\usepackage[babel,german=quotes]{csquotes}
+
+% ------------------------------------------------------------------------------
+% Title Setup
+% ------------------------------------------------------------------------------
+\newcommand{\HRule}[1]{\rule{\linewidth}{#1}} % Horizontal rule
+
+\makeatletter               % Title
+\def\printtitle{%
+	{\centering \@title\par}}
+\makeatother
+
+\makeatletter               % Author
+\def\printauthor{%
+	{\centering \normalsize \@author}}
+\makeatother
+
+
+\title{	\normalsize Erstellung eines Bulk SMS Senders% Subtitle of the document
+	\\[2.0cm] \HRule{0.5pt} \\
+	\LARGE \textbf{\uppercase{Dokumentation Übung 3}} % Title
+	\HRule{2pt} \\[1.5cm]
+	\normalsize Wien am \today \\
+	\normalsize Technische Universität Wien \\[1.0cm]
+	\normalsize ausgeführt im Rahmen der Lehrveranstaltung \\
+	\LARGE 183.286 – (Mobile) Network Service Applications
+}
+
+
+\author{
+	Gruppe 7 \\[2.0cm]
+	Alexander Falb \\
+	0925915 \\
+	E 033 534 \\
+	Software and Information Engineering \\[2.0cm]
+	Michael Borkowski \\
+	0925853 \\
+	E 066 937 \\
+	Software Engineering and Internet Computing \\[2.0cm]
+}
+
+\begin{document}
+% ------------------------------------------------------------------------------
+% Title Page
+% ------------------------------------------------------------------------------
+\thispagestyle{empty} % Remove page numbering on this page
+\printtitle
+	\vfill
+\printauthor
+
+% ------------------------------------------------------------------------------
+% Table of Contents
+% ------------------------------------------------------------------------------
+\newpage
+\tableofcontents
+
+% ------------------------------------------------------------------------------
+% Document
+% ------------------------------------------------------------------------------
+\newpage
+\section{Kurzfassung}
+Dieses Dokument stellt den Abschlussbericht der dritten Übung der LVA \enquote{(Mobile) Network Service Applications} dar. Konkret handelt es sich um den Abgabebericht der Gruppe 7 (Falb und Borkowski).
+
+Die Übung bestand in der Entwicklung eines automatischen SMS Senders. Dazu sollten Telefonnummer und SMS Inhalt aus einer CSV Datei gelesen und im PDU Modus per Modem versendet werden.
+
+
+\section{Einleitung}
+Die Vorgabe der Lehrveranstaltungsleitung war das Entwickeln eines Bulk SMS Senders.
+
+\section{Problemstellung / Zielsetzung}
+\subsection{Konfiguration}
+Das Programm soll per Java-Properties Datei, welche den COM Port an dem das Modem angeschlossen ist, sowie den Filenamen der CSV Datei welche die SMS Daten beinhält, konfigurierbar sein.
+
+Wird keine Properties Datei gefunden erzeugt das Programm eine solche, vorbefüllt mit Platzhalter.
+
+\subsection{Kommunikation}
+Das Programm soll per COM Port mit dem Modem des Telefons mit Hayes/AT Kommandos\footnote{\url{http://en.wikipedia.org/wiki/Hayes_command_set}} im PDU Modus\footnote{\url{http://en.wikipedia.org/wiki/Concatenated_SMS\#PDU_Mode_SMS}} kommunizieren um SMS zu versenden. Das impliziert, dass das Program diverse Konvertierungen des zu versendenden Textes von UTF8 (Zeichensatz der CSV Datei) in den GSM03.38 Zeichensatz durchführen muss.
+
+
+\section{Methodisches Vorgehen}
+\subsection{Hauptprogramm}
+Nach dem Einlesen der Properties Datei initiiert das Programm eine Verbindung mit dem Modem, fragt gegebenenfalls nach dem PIN und wartet maximal 20 Sekunden auf eine Verbindung mit dem GSM Netzwerk bevor es die Ausführung fortfährt oder beendet. Anschließend wird die spezifizierte CSV Datei Zeilenweise eingelesen, die Zeilen je nach Textlänge in ein oder mehrere SMS umgewandelt und diese verschickt.
+
+\subsection{Kodierung}
+Der aufwendigste Punkt dieser Aufgabe ist die Umwandlung des UTF8 SMS-Textes in einen als ASCII dargestellten BASE-16 encodierten GSM03.38 Zeichensatz. GSM03.38 ist ein  7-Bit Alphabet, welches, um Platz zu sparen, interleaved ist, das heißt es können 160 1-Byte Zeichen (= maximale länge einer SMS) in nur 140 Bytes GSM03.38 abgebildet werden - mit dem Nachteil, dass nicht alle UTF8 Zeichen im GSM03.38 abgebildet werden können, beziehungsweise manche Zeichen 2 mal 7-Bit benötigen. Es wurde das \enquote{Basic Character Set} mit der \enquote{Basic Character Set Extension} implementiert. 
+
+\subsection{Concatenated SMS}
+Es ist des weiteren möglich Nachrichten mit einer Länge von mehr als 160 Zeichen zu verschicken, diese werden geteilt und als \enquote{Concatenated SMS} versandt.
+
+
+\section{Inbetriebnahme}
+
+Da das Projekt als Maven-Projekt realisiert wurde, reicht der Aufruf \texttt{mvn}, um das Projekt zu kompillieren und zu packen. Maven führt daraufhin auch die Unit-Tests aus.
+
+\section{Resultat}
+Das Endergebnis ist ein Programm welches automatisch beliebig viele Nachrichten an beliebige Telefonnummern per AT Kommandos verschicken kann.
+
+\end{document}
