@@ -6,14 +6,14 @@ import tuwien.inso.mnsa.smssender.translator.MappingException;
 public class SMS {
 	public static final int MAXIMUM_PDU_LENGTH = 140;
 
-	public static final int UDHI_BIT = 7;
-	public static final int STATUS_REPORT_BIT = 6;
+	public static final int UDHI_BIT = 6;
+	public static final int STATUS_REPORT_BIT = 5;
 
 	public static final byte PROTOCOL_IDENTIFIER = 0;
 	public static final byte DATA_CODING_SCHEME = 0;
 
 	private final int smsDescriptorLength;
-	
+
 	private final byte[] udh, payload;
 	private final byte[] pdu;
 
@@ -36,12 +36,12 @@ public class SMS {
 			smsCenterRaw = smsCenter.getEncoded();
 		else
 			smsCenterRaw = new byte[] { (byte) 0 };
-		
+
 		smsDescriptorLength = smsCenterRaw.length;
 
 		byte[] smsReceiverRaw = destination.getEncoded(false);
 		byte messageFlags = 0;
-		if (udh != null)
+		if (udh.length != 0)
 			messageFlags |= 1 << UDHI_BIT;
 		if (requestStatusReport)
 			messageFlags |= 1 << STATUS_REPORT_BIT;
@@ -61,7 +61,7 @@ public class SMS {
 		pdu[i++] = (byte) effectiveSeptets;
 		System.arraycopy(effectivePayoadPacked, 0, pdu, i, effectivePayoadPacked.length);
 	}
-	
+
 	public int getSMSCDescriptorLength() {
 		return smsDescriptorLength;
 	}
